@@ -1072,7 +1072,7 @@ static void blk_unregister_tracepoints(void)
 	unregister_trace_block_bio_complete(blk_add_trace_bio_complete, NULL);
 	/* NVMTrace */	
 	unregister_trace_pmem_write_queue(blk_add_trace_pmem_write_queue, NULL);
-    unregister_trace_pmem_write_complete(blk_add_trace_pmem_write_complete, NULL);
+        unregister_trace_pmem_write_complete(blk_add_trace_pmem_write_complete, NULL);
 	/**/
 	unregister_trace_block_bio_bounce(blk_add_trace_bio_bounce, NULL);
 	unregister_trace_block_rq_complete(blk_add_trace_rq_complete, NULL);
