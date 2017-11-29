@@ -779,6 +779,7 @@ static void blk_add_trace_bio(struct request_queue *q, struct bio *bio,
 			bio_op(bio), bio->bi_opf, what, error, 0, NULL);
 }
 
+/* NVMTrace */
 static void blk_add_trace_pmem(struct request_queue *q, struct block_device *bdev, struct blk_dax_ctl *dax,
 			      u32 what, int error)
 {
@@ -789,7 +790,6 @@ static void blk_add_trace_pmem(struct request_queue *q, struct block_device *bde
 
 	__blk_add_trace(bt, 0, 0, 0, 0, BLK_TA_QUEUE, 0, 0, NULL);
 }
-
 /**/
 
 static void blk_add_trace_bio_bounce(void *ignore,
