@@ -34,7 +34,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/blk-cgroup.h>
 
-#define CREATE_TRACE_POINTS
+// #define CREATE_TRACE_POINTS
 #include <trace/events/block.h>
 
 #include "blk.h"
