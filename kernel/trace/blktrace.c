@@ -779,6 +779,19 @@ static void blk_add_trace_bio(struct request_queue *q, struct bio *bio,
 			bio_op(bio), bio->bi_opf, what, error, 0, NULL);
 }
 
+static void blk_add_trace_pmem(struct request_queue *q, struct block_device *bdev, struct blk_dax_ctl *dax,
+			      u32 what, int error)
+{
+	struct blk_trace *bt = q->blk_trace;
+
+	if (likely(!bt))
+		return;
+
+	__blk_add_trace(bt, 0, 0, 0, 0, BLK_TA_QUEUE, 0, 0, NULL);
+}
+
+/**/
+
 static void blk_add_trace_bio_bounce(void *ignore,
 				     struct request_queue *q, struct bio *bio)
 {
@@ -813,6 +826,21 @@ static void blk_add_trace_bio_queue(void *ignore,
 {
 	blk_add_trace_bio(q, bio, BLK_TA_QUEUE, 0);
 }
+
+/* NVMTrace */
+static void blk_add_trace_pmem_write_queue(void *ignore,
+				    struct request_queue *q, struct block_device *bdev, struct blk_dax_ctl *dax)
+{
+	blk_add_trace_pmem(q, bdev, dax, BLK_TA_QUEUE, 0);
+}
+
+static void blk_add_trace_pmem_write_complete(void *ignore,
+				    struct request_queue *q, struct block_device *bdev, struct blk_dax_ctl *dax)
+{
+	blk_add_trace_pmem(q, bdev, dax, BLK_TA_COMPLETE, 0);
+}
+
+/* */
 
 static void blk_add_trace_getrq(void *ignore,
 				struct request_queue *q,
@@ -1005,6 +1033,14 @@ static void blk_register_tracepoints(void)
 	WARN_ON(ret);
 	ret = register_trace_block_bio_queue(blk_add_trace_bio_queue, NULL);
 	WARN_ON(ret);
+	
+	/* NVMTrace */
+	ret = register_trace_pmem_write_queue(blk_add_trace_pmem_write_queue, NULL);
+	WARN_ON(ret);
+	ret = register_trace_pmem_write_complete(blk_add_trace_pmem_write_complete, NULL);
+	WARN_ON(ret);
+	/**/
+
 	ret = register_trace_block_getrq(blk_add_trace_getrq, NULL);
 	WARN_ON(ret);
 	ret = register_trace_block_sleeprq(blk_add_trace_sleeprq, NULL);
@@ -1034,6 +1070,10 @@ static void blk_unregister_tracepoints(void)
 	unregister_trace_block_bio_frontmerge(blk_add_trace_bio_frontmerge, NULL);
 	unregister_trace_block_bio_backmerge(blk_add_trace_bio_backmerge, NULL);
 	unregister_trace_block_bio_complete(blk_add_trace_bio_complete, NULL);
+	/* NVMTrace */	
+	unregister_trace_pmem_write_queue(blk_add_trace_pmem_write_queue, NULL);
+    unregister_trace_pmem_write_complete(blk_add_trace_pmem_write_complete, NULL);
+	/**/
 	unregister_trace_block_bio_bounce(blk_add_trace_bio_bounce, NULL);
 	unregister_trace_block_rq_complete(blk_add_trace_rq_complete, NULL);
 	unregister_trace_block_rq_requeue(blk_add_trace_rq_requeue, NULL);

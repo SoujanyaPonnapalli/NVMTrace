@@ -33,7 +33,14 @@
 #include <linux/sizes.h>
 #include <linux/mmu_notifier.h>
 #include <linux/iomap.h>
+
 #include "internal.h"
+
+#define CREATE_TRACE_POINTS
+#include <trace/events/block.h>
+
+EXPORT_TRACEPOINT_SYMBOL_GPL(pmem_write_queue);
+EXPORT_TRACEPOINT_SYMBOL_GPL(pmem_write_complete);
 
 /* We choose 4096 entries - same as per-zone page wait tables */
 #define DAX_WAIT_TABLE_BITS 12
@@ -757,6 +764,7 @@ static int dax_writeback_one(struct block_device *bdev,
 	struct blk_dax_ctl dax;
 	void *entry2, **slot;
 	int ret = 0;
+	struct request_queue *q;
 
 	/*
 	 * A page got tagged dirty in DAX mapping? Something is seriously
@@ -823,6 +831,9 @@ static int dax_writeback_one(struct block_device *bdev,
 		goto unmap;
 	}
 
+	q = bdev_get_queue(bdev);
+    trace_pmem_write_queue(q, bdev, &dax);	
+
 	dax_mapping_entry_mkclean(mapping, index, pfn_t_to_pfn(dax.pfn));
 	wb_cache_pmem(dax.addr, dax.size);
 	/*
@@ -831,6 +842,9 @@ static int dax_writeback_one(struct block_device *bdev,
 	 * the pfn mappings are writeprotected and fault waits for mapping
 	 * entry lock.
 	 */
+	
+	trace_pmem_write_complete(q, bdev, &dax);
+
 	spin_lock_irq(&mapping->tree_lock);
 	radix_tree_tag_clear(page_tree, index, PAGECACHE_TAG_DIRTY);
 	spin_unlock_irq(&mapping->tree_lock);
