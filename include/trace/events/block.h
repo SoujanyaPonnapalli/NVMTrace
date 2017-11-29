@@ -379,8 +379,7 @@ DEFINE_EVENT(block_bio_merge, block_bio_frontmerge,
 	TP_ARGS(q, rq, bio)
 );
 
-/* [RSKP] NVMTrace */
-
+/* NVMTrace */
 TRACE_EVENT(pmem_write_queue,
 
 	TP_PROTO(struct request_queue *q, struct block_device *bdev, struct blk_dax_ctl *dax),
@@ -409,6 +408,7 @@ TRACE_EVENT(pmem_write_queue,
 	)
 );
 
+/* NVMTrace */
 TRACE_EVENT(pmem_write_complete,
 
 	TP_PROTO(struct request_queue *q, struct block_device *bdev, struct blk_dax_ctl *dax),
@@ -436,8 +436,6 @@ TRACE_EVENT(pmem_write_complete,
 		  (long) __entry->size
 	)
 );
-
-
 
 /**
  * block_bio_queue - putting new block IO operation in queue
