@@ -33,12 +33,11 @@
 #include <linux/sizes.h>
 #include <linux/mmu_notifier.h>
 #include <linux/iomap.h>
-
 #include "internal.h"
 
+/* NVMTrace */
 #define CREATE_TRACE_POINTS
 #include <trace/events/block.h>
-
 EXPORT_TRACEPOINT_SYMBOL_GPL(pmem_write_queue);
 EXPORT_TRACEPOINT_SYMBOL_GPL(pmem_write_complete);
 
@@ -764,6 +763,7 @@ static int dax_writeback_one(struct block_device *bdev,
 	struct blk_dax_ctl dax;
 	void *entry2, **slot;
 	int ret = 0;
+	/* NVMTrace */
 	struct request_queue *q;
 
 	/*
@@ -830,9 +830,10 @@ static int dax_writeback_one(struct block_device *bdev,
 		ret = -EIO;
 		goto unmap;
 	}
-
+	
+	/* NVMTrace DAX writes queueing */
 	q = bdev_get_queue(bdev);
-    trace_pmem_write_queue(q, bdev, &dax);	
+        trace_pmem_write_queue(q, bdev, &dax);	
 
 	dax_mapping_entry_mkclean(mapping, index, pfn_t_to_pfn(dax.pfn));
 	wb_cache_pmem(dax.addr, dax.size);
@@ -842,7 +843,7 @@ static int dax_writeback_one(struct block_device *bdev,
 	 * the pfn mappings are writeprotected and fault waits for mapping
 	 * entry lock.
 	 */
-	
+	/* NVMTrace DAX writes completion */
 	trace_pmem_write_complete(q, bdev, &dax);
 
 	spin_lock_irq(&mapping->tree_lock);
