@@ -155,12 +155,15 @@ enum req_opf {
 	REQ_OP_ZONE_REPORT	= 4,
 	/* securely erase sectors */
 	REQ_OP_SECURE_ERASE	= 5,
-	/* seset a zone write pointer */
-	REQ_OP_ZONE_RESET	= 6,
+	/* NVM DAX WRITE TRACE */
+	REQ_OP_PMEM_WRITE = 6,
 	/* write the same sector many times */
 	REQ_OP_WRITE_SAME	= 7,
 	/* write the zero filled sector many times */
 	REQ_OP_WRITE_ZEROES	= 8,
+	/* seset a zone write pointer */
+	REQ_OP_ZONE_RESET	= 9,
+	
 
 	REQ_OP_LAST,
 };

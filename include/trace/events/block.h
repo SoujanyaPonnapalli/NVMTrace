@@ -379,7 +379,7 @@ DEFINE_EVENT(block_bio_merge, block_bio_frontmerge,
 	TP_ARGS(q, rq, bio)
 );
 
-/* NVMTrace */
+/* [RSKP] NVMTrace */
 TRACE_EVENT(pmem_write_queue,
 
 	TP_PROTO(struct request_queue *q, struct block_device *bdev, struct blk_dax_ctl *dax),
@@ -391,6 +391,8 @@ TRACE_EVENT(pmem_write_queue,
 		__field( sector_t,	    sector		)
 		__field( void*,	addr		)
 		__field( long,	        size		)
+		__array( char,		rwbs,	RWBS_LEN	)
+		__array( char,		comm,	TASK_COMM_LEN	)
 	),
 
 	TP_fast_assign(
@@ -398,17 +400,18 @@ TRACE_EVENT(pmem_write_queue,
 		__entry->sector		= dax->sector;
 		__entry->addr		= dax->addr;
 		__entry->size		= dax->size;
+		blk_fill_rwbs(__entry->rwbs, REQ_OP_PMEM_WRITE, __entry->size);
+		memcpy(__entry->comm, current->comm, TASK_COMM_LEN);
 	),
 
-	TP_printk("TEST: %d,%d %llu %lu %ld",
-		  MAJOR(__entry->dev), MINOR(__entry->dev),
+	TP_printk("%d,%d %s %llu + %u [%s]",
+		  MAJOR(__entry->dev), MINOR(__entry->dev), __entry->rwbs,
 		  (unsigned long long)__entry->sector,
-		  (unsigned long) __entry->addr,
-		  (long) __entry->size
+		  (unsigned int) __entry->size,
+		  __entry->comm
 	)
 );
 
-/* NVMTrace */
 TRACE_EVENT(pmem_write_complete,
 
 	TP_PROTO(struct request_queue *q, struct block_device *bdev, struct blk_dax_ctl *dax),
@@ -420,6 +423,8 @@ TRACE_EVENT(pmem_write_complete,
 		__field( sector_t,	    sector		)
 		__field( void*,	addr		)
 		__field( long,	        size		)
+		__array( char,		rwbs,	RWBS_LEN	)
+		__array( char,		comm,	TASK_COMM_LEN	)
 	),
 
 	TP_fast_assign(
@@ -427,15 +432,19 @@ TRACE_EVENT(pmem_write_complete,
 		__entry->sector		= dax->sector;
 		__entry->addr		= dax->addr;
 		__entry->size		= dax->size;
+		blk_fill_rwbs(__entry->rwbs, REQ_OP_PMEM_WRITE, __entry->size);
+		memcpy(__entry->comm, current->comm, TASK_COMM_LEN);
 	),
 
-	TP_printk("TEST: %d,%d %llu %lu %ld",
-		  MAJOR(__entry->dev), MINOR(__entry->dev),
+	TP_printk("%d,%d %s %llu + %u [%s]",
+		  MAJOR(__entry->dev), MINOR(__entry->dev), __entry->rwbs,
 		  (unsigned long long)__entry->sector,
-		  (unsigned long) __entry->addr,
-		  (long) __entry->size
+		  (unsigned int) __entry->size,
+		  __entry->comm
 	)
 );
+
+
 
 /**
  * block_bio_queue - putting new block IO operation in queue

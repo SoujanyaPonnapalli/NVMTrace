@@ -230,6 +230,9 @@ static inline void clwb(volatile void *__p)
 		X86_FEATURE_CLWB)
 		: [p] "+m" (*p)
 		: [pax] "a" (p));
+
+	printk(KERN_INFO "NVMTrace: CacheLine Flush addr = %lx, size = 64", (unsigned long) p);
+
 }
 
 #define nop() asm volatile ("nop")

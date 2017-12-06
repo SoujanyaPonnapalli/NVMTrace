@@ -223,6 +223,8 @@ static void __blk_add_trace(struct blk_trace *bt, sector_t sector, int bytes,
 	what |= MASK_TC_BIT(op_flags, META);
 	what |= MASK_TC_BIT(op_flags, PREFLUSH);
 	what |= MASK_TC_BIT(op_flags, FUA);
+	if ((op & REQ_OP_PMEM_WRITE) == REQ_OP_PMEM_WRITE)
+		what |= BLK_TC_ACT(BLK_TC_FLUSH);
 	if (op == REQ_OP_DISCARD || op == REQ_OP_SECURE_ERASE)
 		what |= BLK_TC_ACT(BLK_TC_DISCARD);
 	if (op == REQ_OP_FLUSH)
@@ -779,8 +781,7 @@ static void blk_add_trace_bio(struct request_queue *q, struct bio *bio,
 			bio_op(bio), bio->bi_opf, what, error, 0, NULL);
 }
 
-/* NVMTrace */
-static void blk_add_trace_pmem(struct request_queue *q, struct block_device *bdev, struct blk_dax_ctl *dax,
+static void blk_add_trace_pmem_queue(struct request_queue *q, struct block_device *bdev, struct blk_dax_ctl *dax,
 			      u32 what, int error)
 {
 	struct blk_trace *bt = q->blk_trace;
@@ -788,8 +789,20 @@ static void blk_add_trace_pmem(struct request_queue *q, struct block_device *bde
 	if (likely(!bt))
 		return;
 
-	__blk_add_trace(bt, 0, 0, 0, 0, BLK_TA_QUEUE, 0, 0, NULL);
+	__blk_add_trace(bt, dax->sector, dax->size, 1 | REQ_OP_PMEM_WRITE, 0, BLK_TA_QUEUE, 0, 0, NULL);
 }
+
+static void blk_add_trace_pmem_complete(struct request_queue *q, struct block_device *bdev, struct blk_dax_ctl *dax,
+			      u32 what, int error)
+{
+	struct blk_trace *bt = q->blk_trace;
+
+	if (likely(!bt))
+		return;
+
+	__blk_add_trace(bt, dax->sector, dax->size, 1 | REQ_OP_PMEM_WRITE, 0, BLK_TA_COMPLETE, 0, 0, NULL);
+}
+
 /**/
 
 static void blk_add_trace_bio_bounce(void *ignore,
@@ -831,13 +844,13 @@ static void blk_add_trace_bio_queue(void *ignore,
 static void blk_add_trace_pmem_write_queue(void *ignore,
 				    struct request_queue *q, struct block_device *bdev, struct blk_dax_ctl *dax)
 {
-	blk_add_trace_pmem(q, bdev, dax, BLK_TA_QUEUE, 0);
+	blk_add_trace_pmem_queue(q, bdev, dax, BLK_TA_QUEUE, 0);
 }
 
 static void blk_add_trace_pmem_write_complete(void *ignore,
 				    struct request_queue *q, struct block_device *bdev, struct blk_dax_ctl *dax)
 {
-	blk_add_trace_pmem(q, bdev, dax, BLK_TA_COMPLETE, 0);
+	blk_add_trace_pmem_complete(q, bdev, dax, BLK_TA_COMPLETE, 0);
 }
 
 /* */
@@ -1072,7 +1085,7 @@ static void blk_unregister_tracepoints(void)
 	unregister_trace_block_bio_complete(blk_add_trace_bio_complete, NULL);
 	/* NVMTrace */	
 	unregister_trace_pmem_write_queue(blk_add_trace_pmem_write_queue, NULL);
-        unregister_trace_pmem_write_complete(blk_add_trace_pmem_write_complete, NULL);
+    unregister_trace_pmem_write_complete(blk_add_trace_pmem_write_complete, NULL);
 	/**/
 	unregister_trace_block_bio_bounce(blk_add_trace_bio_bounce, NULL);
 	unregister_trace_block_rq_complete(blk_add_trace_rq_complete, NULL);
@@ -1406,6 +1419,8 @@ static enum print_line_t print_one_line(struct trace_iterator *iter,
 		log_action(iter, what2act[what].act[long_act]);
 		what2act[what].print(s, iter->ent);
 	}
+
+	printk(KERN_INFO "%s printing...", __func__);
 
 	return trace_handle_return(s);
 }
@@ -1825,6 +1840,9 @@ void blk_fill_rwbs(char *rwbs, unsigned int op, int bytes)
 		rwbs[i++] = 'F';
 
 	switch (op & REQ_OP_MASK) {
+	case REQ_OP_PMEM_WRITE:
+	    rwbs[i++] = 'P';
+	    break;
 	case REQ_OP_WRITE:
 	case REQ_OP_WRITE_SAME:
 		rwbs[i++] = 'W';

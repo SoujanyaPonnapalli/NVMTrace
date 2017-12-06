@@ -32,6 +32,8 @@
 #include "pmem.h"
 #include "pfn.h"
 #include "nd.h"
+#include <trace/events/block.h>
+
 
 static struct device *to_dev(struct pmem_device *pmem)
 {
@@ -174,6 +176,8 @@ static blk_qc_t pmem_make_request(struct request_queue *q, struct bio *bio)
 	if (bio->bi_opf & REQ_FUA)
 		nvdimm_flush(nd_region);
 
+	/* NVMTrace */
+	trace_block_bio_complete(q, bio, bio->bi_error);
 	bio_endio(bio);
 	return BLK_QC_T_NONE;
 }
